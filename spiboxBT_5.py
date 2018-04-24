@@ -25,28 +25,34 @@ class Threads(threading.Thread, q):
     def _init_(self, q):
         threading.Thread._init_(self)
         self.queue = q
-        
-    def run(self):
-        while True:
-            self.q.get()
-            self.q.task_done()
-
-start = time.time()
-
-def main():
-        for i in range(10):
-            t = Threads()
-            t.setDaemon(True)
-            t.start()
-            q.join()
-
+#initializing threading
 
 
 class EventHandler(pyinotify.ProcessEvent):
     def process_IN_CREATE(self, event):
         print("Got file change from watcher")
         displayFrame.updateImage()
+        q.put(event)
         
+    def _init_(self, queue):
+        self.queue = queue
+
+
+def process(queue):
+    while True:
+        event = queue.get()
+
+#https://stackoverflow.com/questions/26195052/python-notify-when-all-files-have-been-transferred
+######may start new if statement here
+for i in range(10):
+    t = Thread(target = process)
+    t.daemon = True
+    t.start()
+
+q.join()
+#trying to set up queue
+
+
 def watcherThread():
     
     wm = pyinotify.WatchManager()
@@ -55,7 +61,9 @@ def watcherThread():
     
     print("Starting watch")
     notifier.loop()
-#_thread.start_new_thread(watcherThread, ())
+
+######need to eventually put watcherThread into queue
+#EventHandler and watcherThread set up folder watcher via pyinotify
 
 
 
@@ -63,11 +71,12 @@ def watcherThread():
 def startPrimitive():
     if not pirActive:
     
+        pirActive = False
         print("Primitive started")
         #subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
         print("Primitive completed")
         #Starts Primitive and outputs picture
-        pirActive = False
+        pirActive = True
 
 
 
