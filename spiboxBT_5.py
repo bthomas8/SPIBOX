@@ -14,15 +14,6 @@ import pyinotify
 from threading import Thread
 import _thread
 import queue
-#import random
-#https://www.safaribooksonline.com/library/view/python-cookbook/0596001673/ch09s07.html
-#https://stackoverflow.com/questions/13481276/threading-in-python-using-queue
-#https://www.troyfawkes.com/learn-python-multithreading-queues-basics/
-
-
-q = queue.Queue(10)
-q_threads = 4
-
 
 
 
@@ -35,6 +26,8 @@ class EventHandler(pyinotify.ProcessEvent):
     def _init_(self, q):
         self.q = q
 
+
+
 def watcherThread():
     wm = pyinotify.WatchManager()
     wm.add_watch('/home/pi/spibox/capture/primout', pyinotify.IN_CREATE, rec = True, auto_add = True)
@@ -45,39 +38,23 @@ def watcherThread():
 
 
 
-
 #trying to set up queue
-#https://stackoverflow.com/questions/26195052/python-notify-when-all-files-have-been-transferred
 def processes(q):
-    while True:
-        if q.empty():
-            print('Getting tasks from queue')
-            q.get()
+    while not q.empty():
+        q.get()
         q.task_done()
         print('Task complete')
 
 
-for i in range(q_threads):
-    t1 = Thread(target = processes, args = (q,))
-    #t2 = Thread(target = EventHandler)
-    
-    t1.setDaemon(True)
-    #t2.setDaemon(True)
-    
-    t1.start()
-#t2.start()
-q.join()
 
 #Starts Primitive and outputs picture
 def startPrimitive():
-    if not pirActive:
-        
-        pirActive = False
-        print("Primitive started")
-        #subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
+    #if not pirActive:
+    #pirActive = False
+    print("Primitive started")
+    #subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
         print("Primitive completed")
-        pirActive = True
-
+#pirActive = True
 
 
 
@@ -113,13 +90,10 @@ class DisplayFrame:
         self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
         self.img2Label.grid(row = "3")
         
-        
         DisplayFrame.root.mainloop()
         print("after starting tkinter main loop")
     
-    
-    #Searches folder for most recent file
-    #Updates bottom image (img 2)
+    #Searches folder for most recent file and updates (img 2)
     def updateImage(self):
         print("Bottom image should update")
         
@@ -131,8 +105,6 @@ class DisplayFrame:
         self.img2Label.configure(image = self.img3)
         self.img2Label.image = self.img3
 
-displayFrame = DisplayFrame()
-
 
 
 #Names PI picture output file
@@ -141,43 +113,65 @@ def get_file_name() -> str:
 
 
 
-
-#Takes picture
-#Starts threads
-PIR = 4
 def photo():
     for i in range(1,2):
         capturename = get_file_name()
         print('Motion detected! Taking snapshot')
         cmd="raspistill -w 256 -h 256 -n -t 10 -q 10 -e png -th none -o /home/pi/spibox/capture/" + capturename+"_%d.png" % (i)
         camerapid = subprocess.call(cmd,shell=True)
-        
-        
         q.put(displayFrame.displayPicture())
+        q.put(EventHandler)
         q.put(watcherThread())
+#maybe more
 
 
 
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(PIR, GPIO.IN, GPIO.PUD_DOWN)
-
-
-try:
+def start_motion_sensor(PIR):
     print ("Turning on motion sensor")
-    # Loop until PIR indicates nothing is happening
     while GPIO.input(PIR)==1:
-        Current_State  = 0
+        Current_State = 0
     print ("Sensor ready")
 
-while True:
-    print('Waiting for movement')
-    GPIO.wait_for_edge(PIR,GPIO.RISING)
-    photo()
-
-except KeyboardInterrupt:
-    print ("Bye for now")
-    # Reset GPIO
-    GPIO.cleanup()
 
 
+def wait_for_motion():
+    while True:
+        print("Waiting for movement")
+        GPIO.wait_for_edge(PIR,GPIO.RISING)
+        photo()
+
+
+
+PIR = 4
+q = queue.Queue(maxsize = 5)
+q_threads = 2
+displayFrame = DisplayFrame()
+
+def main():
+    
+    for i in range(q_threads):
+        t1 = Thread(target = processes, args = (q,))
+        t1.setDaemon(True)
+        t1.start()
+    q.join()
+    
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(PIR, GPIO.IN, GPIO.PUD_DOWN)
+    
+    try:
+        start_motion_sensor(PIR)
+        wait_for_motion()
+    
+    except KeyboardInterrupt:
+        print ("Bye for now")
+        # Reset GPIO
+        GPIO.cleanup()
+
+
+
+if __name__ == '__main__':
+    main()
+
+
+#https://www.tutorialspoint.com/python3/python_multithreading.htm
 
