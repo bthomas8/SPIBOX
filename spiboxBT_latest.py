@@ -17,26 +17,6 @@ import queue
 
 
 
-#EventHandler and watcherThread set up folder watcher via pyinotify  
-class EventHandler(pyinotify.ProcessEvent):
-    def process_IN_CREATE(self, event):
-        print("Got file change from watcher")
-        displayFrame.updateImage()
-        
-    def _init_(self, q):
-        self.q = q
-
-
-
-def watcherThread(displayFrame):
-    print("Starting watch")
-    wm = pyinotify.WatchManager()
-    wm.add_watch('/home/pi/spibox/capture/primout', pyinotify.IN_CREATE, rec = True, auto_add = True)
-    notifier = pyinotify.Notifier(wm, EventHandler(displayFrame))
-    notifier.loop()
-
-
-
 #trying to set up queue
 def processes(q):
     print('running processes')
@@ -54,7 +34,7 @@ def startPrimitive():
     #if not pirActive:
         #pirActive = False
         print("Primitive started")
-        subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
+        #subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
         print("Primitive completed")
         #pirActive = True
 
@@ -88,6 +68,7 @@ class DisplayFrame:
         self.text.grid(row = "2")
         
         #Bottom image
+        #self.img2 = PhotoImage(file = latestFile)
         self.img2 = PhotoImage(file = '/home/pi/spibox/capture/loading.png')
         self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
         self.img2Label.grid(row = "3")
@@ -106,6 +87,30 @@ class DisplayFrame:
         self.img3 = PhotoImage(file = latestFile)
         self.img2Label.configure(image = self.img3)
         self.img2Label.image = self.img3
+        #self.img2 = PhotoImage(file = latestFile)
+
+
+
+#EventHandler and watcherThread set up folder watcher via pyinotify  
+class EventHandler(pyinotify.ProcessEvent):
+    def process_IN_CREATE(self, event):
+        displayFrame = DisplayFrame()
+        print("Got file change from watcher")
+        displayFrame.updateImage()
+        
+    def _init_(self, q):
+        self.q = q
+
+
+
+def watcherThread():
+    displayFrame = DisplayFrame()
+    
+    print("Starting watch")
+    wm = pyinotify.WatchManager()
+    wm.add_watch('/home/pi/spibox/capture/primout', pyinotify.IN_CREATE, rec = True, auto_add = True)
+    notifier = pyinotify.Notifier(wm, EventHandler())
+    notifier.loop()
 
 
 
@@ -123,6 +128,7 @@ def photo(displayFrame, q):
         camerapid = subprocess.call(cmd,shell=True)
         q.put(startPrimitive)
         q.put(EventHandler)
+        displayFrame.updateImage()
         displayFrame.displayPicture()
         
 
@@ -152,7 +158,7 @@ def main():
     
     for i in range(q_threads):
         t1 = Thread(target = processes, args = (q,))
-        t2 = Thread(target = watcherThread, args = displayFrame)
+        t2 = Thread(target = watcherThread)
         t1.setDaemon(True)
         t2.setDaemon(True)
         t1.start()
