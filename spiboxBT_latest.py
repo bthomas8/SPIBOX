@@ -45,14 +45,23 @@ class DisplayFrame:
     def _init_(self, master, q):
         self.q = q
         Frame._init_(self)
-        #w, h = 700, 700
         self.grid()
     
-    #May use this to help refresh latestFile within displayPicture
-    def imageFinder():
+    #Refreshes bottom image
+    def imageFinder(self):
+        print('Ran imageFinder')
         latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
-        return latestFile
         
+        if latestFile == '/home/pi/spibox/capture/primout/primitive_output100.png':
+            #May create/call another func to give final display
+            print('done')
+            
+        else:
+            self.img2 = PhotoImage(file = latestFile)
+            self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
+            self.img2Label.grid(row = "3")
+            DisplayFrame.root.after(2000, self.imageFinder)
+            
     #Builds the GUI picture frame
     def displayPicture(self):
         print('Building display frame')
@@ -68,15 +77,9 @@ class DisplayFrame:
         self.text.tag_configure("center", justify = "center")
         self.text.tag_add("center", 1.0, "end")
         self.text.grid(row = "2")
-        
-        #Need to find a way for this to update
-        while True:
-            latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
-            print(latestFile)
-            break
-        
+                
         #Bottom image
-        self.img2 = PhotoImage(file = latestFile)
+        self.img2 = PhotoImage(file = '/home/pi/spibox/capture/loading.png')
         self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
         self.img2Label.grid(row = "3")
         
@@ -84,26 +87,16 @@ class DisplayFrame:
         print("Tkinter main loop ended")
         main()
         
-    #Try to update img2 
-    def updateImage(self):
-        displayFrame = DisplayFrame()
-        
-        #latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
-        #print(latestFile)
-        #self.img2 = PhotoImage(file = latestFile)
-        #self.img2Label.configure(image = self.img2)
-        
-        print("Bottom image should update")
-        displayFrame.displayPicture()
-
 
 
 #EventHandler, watcherThread set up watcher via pyinotify  
 class EventHandler(pyinotify.ProcessEvent):
+    displayFrame = DisplayFrame()
+
     def process_IN_CREATE(self, event):
         displayFrame = DisplayFrame()
         print("Got file change from watcher")
-        displayFrame.updateImage()
+        displayFrame.imageFinder()
         
     def _init_(self, q):
         self.q = q
@@ -124,6 +117,7 @@ def watcherThread():
 #Names initial picture output
 def get_file_name() -> str:
     return 'spi_output'    
+ 
  
 
 #Takes photo, calls TK
@@ -146,6 +140,7 @@ def start_motion_sensor(pir_pin):
     print ("Sensor ready")
 
 
+
 #Detects motion 
 def wait_for_motion(PIR, displayFrame, q):
     while True:
@@ -154,15 +149,14 @@ def wait_for_motion(PIR, displayFrame, q):
         photo(displayFrame, q)
 
 
+
 #Starts threaded processes and main loop
 def main():
     PIR = 4
     q = queue.Queue(maxsize = 5)
     q_threads = 1
     displayFrame = DisplayFrame()
-    
-#maybe declare latestFile here and pass into disPic?
-    
+        
     for i in range(q_threads):
         t1 = Thread(target = processes, args = (q,))
         t2 = Thread(target = watcherThread)
@@ -189,6 +183,3 @@ def main():
     
 if __name__ == '__main__':
     main()
-
-
-#https://www.tutorialspoint.com/python3/python_multithreading.htm
