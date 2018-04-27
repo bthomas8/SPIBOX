@@ -17,7 +17,7 @@ import queue
 
 
 
-#trying to set up queue
+#Set queue
 def processes(q):
     print('running processes')
     while True:
@@ -29,18 +29,15 @@ def processes(q):
 
 
 
-#Starts Primitive and outputs picture
+#Starts primitive and outputs image iterations
 def startPrimitive():
-    #if not pirActive:
-        #pirActive = False
         print("Primitive started")
         #subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
         print("Primitive completed")
-        #pirActive = True
 
 
 
-#Contains parameters of GUI and funcs to build GUI
+#GUI parameters and funcs to build GUI
 class DisplayFrame:
     
     root = Tk()
@@ -51,47 +48,57 @@ class DisplayFrame:
         #w, h = 700, 700
         self.grid()
     
+    #May use this to help refresh latestFile within displayPicture
+    def imageFinder():
+        latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
+        return latestFile
+        
     #Builds the GUI picture frame
     def displayPicture(self):
         print('Building display frame')
         
-        #Top image, doesn't change
+        #Top image
         self.img1 = PhotoImage(file = '/home/pi/spibox/capture/spi_output_1.png')
         self.img1Label = Label(image = self.img1, width = 256, height = 256)
         self.img1Label.grid(row = "1")
         
-        #Middle banner with text
+        #Middle text banner
         self.text = Text(fg = "White", bg = "Red", bd = 5, width = 35, height = 1)
         self.text.insert(INSERT, "Maryville Cyber Fusion Center")
         self.text.tag_configure("center", justify = "center")
         self.text.tag_add("center", 1.0, "end")
         self.text.grid(row = "2")
         
+        #Need to find a way for this to update
+        while True:
+            latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
+            print(latestFile)
+            break
+        
         #Bottom image
-        #self.img2 = PhotoImage(file = latestFile)
-        self.img2 = PhotoImage(file = '/home/pi/spibox/capture/loading.png')
+        self.img2 = PhotoImage(file = latestFile)
         self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
         self.img2Label.grid(row = "3")
         
         DisplayFrame.root.mainloop()
-        print("after starting tkinter main loop")
+        print("Tkinter main loop ended")
+        main()
         
-    #Searches folder for most recent file and updates (img 2) 
+    #Try to update img2 
     def updateImage(self):
-        print("Bottom image should update")
+        displayFrame = DisplayFrame()
         
-        fileList = glob.glob('/home/pi/spibox/capture/primout/*')
-        latestFile = max(fileList, key = os.path.getctime)
-        print(latestFile)
-        
-        self.img3 = PhotoImage(file = latestFile)
-        self.img2Label.configure(image = self.img3)
-        self.img2Label.image = self.img3
+        #latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
+        #print(latestFile)
         #self.img2 = PhotoImage(file = latestFile)
+        #self.img2Label.configure(image = self.img2)
+        
+        print("Bottom image should update")
+        displayFrame.displayPicture()
 
 
 
-#EventHandler and watcherThread set up folder watcher via pyinotify  
+#EventHandler, watcherThread set up watcher via pyinotify  
 class EventHandler(pyinotify.ProcessEvent):
     def process_IN_CREATE(self, event):
         displayFrame = DisplayFrame()
@@ -114,12 +121,12 @@ def watcherThread():
 
 
 
-#Names PI picture output file
+#Names initial picture output
 def get_file_name() -> str:
     return 'spi_output'    
  
 
- 
+#Takes photo, calls TK
 def photo(displayFrame, q):
     for i in range(1,2):
         capturename = get_file_name()
@@ -127,13 +134,11 @@ def photo(displayFrame, q):
         cmd="raspistill -w 256 -h 256 -n -t 10 -q 10 -e png -th none -o /home/pi/spibox/capture/" + capturename+"_%d.png" % (i)
         camerapid = subprocess.call(cmd,shell=True)
         q.put(startPrimitive)
-        q.put(EventHandler)
-        displayFrame.updateImage()
         displayFrame.displayPicture()
         
 
  
-
+#Motion sensor start up
 def start_motion_sensor(pir_pin):
     print ("Turning on motion sensor")
     while GPIO.input(pir_pin)==1:
@@ -141,7 +146,7 @@ def start_motion_sensor(pir_pin):
     print ("Sensor ready")
 
 
- 
+#Detects motion 
 def wait_for_motion(PIR, displayFrame, q):
     while True:
         print("Waiting for movement")
@@ -149,12 +154,14 @@ def wait_for_motion(PIR, displayFrame, q):
         photo(displayFrame, q)
 
 
-
+#Starts threaded processes and main loop
 def main():
     PIR = 4
     q = queue.Queue(maxsize = 5)
     q_threads = 1
     displayFrame = DisplayFrame()
+    
+#maybe declare latestFile here and pass into disPic?
     
     for i in range(q_threads):
         t1 = Thread(target = processes, args = (q,))
