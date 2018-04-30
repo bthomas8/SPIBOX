@@ -32,14 +32,13 @@ def processes(q):
 #Starts primitive and outputs image iterations
 def startPrimitive():
         print("Primitive started")
-        #subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
+        subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
         print("Primitive completed")
 
 
 
 #GUI parameters and funcs to build GUI
 class DisplayFrame:
-    
     root = Tk()
     
     def _init_(self, master, q):
@@ -49,22 +48,27 @@ class DisplayFrame:
     
     #Refreshes bottom image
     def imageFinder(self):
+        root = Tk()
         print('Ran imageFinder')
         latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
         
         if latestFile == '/home/pi/spibox/capture/primout/primitive_output100.png':
-            #May create/call another func to give final display
-            print('done')
+            self.img2 = PhotoImage(file = '/home/pi/spibox/capture/primout/primitive_output100.png')
+            self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
+            self.img2Label.grid(row = "3")
+            root.after(5000, root.quit())
+            print('Image updating done')
             
         else:
             self.img2 = PhotoImage(file = latestFile)
             self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
             self.img2Label.grid(row = "3")
-            DisplayFrame.root.after(2000, self.imageFinder)
+            root.after(1000, self.imageFinder)
             
     #Builds the GUI picture frame
     def displayPicture(self):
         print('Building display frame')
+        #latestFile = max(glob.glob('/home/pi/spibox/capture/primout/*'), key = os.path.getctime)
         
         #Top image
         self.img1 = PhotoImage(file = '/home/pi/spibox/capture/spi_output_1.png')
@@ -79,13 +83,19 @@ class DisplayFrame:
         self.text.grid(row = "2")
                 
         #Bottom image
+        #self.img2 = PhotoImage(file = latestFile)
         self.img2 = PhotoImage(file = '/home/pi/spibox/capture/loading.png')
         self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
-        self.img2Label.grid(row = "3")
+        self.img2Label.grid(row = "3") 
+        
+        #self.imageFinder()
         
         DisplayFrame.root.mainloop()
         print("Tkinter main loop ended")
-        main()
+        time.sleep(5)
+        subprocess.call('rm /home/pi/spibox/capture/primout/*', shell = True)
+        print('Primout folder cleaned')
+        #main()
         
 
 
@@ -95,7 +105,7 @@ class EventHandler(pyinotify.ProcessEvent):
 
     def process_IN_CREATE(self, event):
         displayFrame = DisplayFrame()
-        print("Got file change from watcher")
+        print("File change in primout")
         displayFrame.imageFinder()
         
     def _init_(self, q):
