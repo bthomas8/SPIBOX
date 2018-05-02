@@ -32,7 +32,7 @@ def processes(q):
 #Starts primitive and outputs image iterations
 def startPrimitive():
         print("Primitive started")
-        subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 5 -s 256 -n 100', shell=True )
+        subprocess.call('/home/pi/go/bin/primitive -i /home/pi/spibox/capture/spi_output_1.png -o /home/pi/spibox/capture/primout/primitive_output%d.png -nth 2 -s 256 -n 100 -m 0', shell=True )
         print("Primitive completed")
 
 
@@ -84,7 +84,7 @@ class DisplayFrame:
                 
         #Bottom image
         #self.img2 = PhotoImage(file = latestFile)
-        self.img2 = PhotoImage(file = '/home/pi/spibox/capture/loading.png')
+        self.img2 = PhotoImage(file = '/home/pi/spibox/capture/an')
         self.img2Label = Label(image = self.img2, bg = "Black", width = 256, height = 256)
         self.img2Label.grid(row = "3") 
         
@@ -95,7 +95,6 @@ class DisplayFrame:
         time.sleep(5)
         subprocess.call('rm /home/pi/spibox/capture/primout/*', shell = True)
         print('Primout folder cleaned')
-        #main()
         
 
 
