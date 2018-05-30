@@ -1,5 +1,6 @@
 # SPIBOX 
 This repository contains a program built upon a Raspberry-Pi SPIBOX script with the following functionality:
+
 -Allow the SPIBOX to capture pictures via PIR motion sensing
 -Folder monitoring
 -Store picture in monitored folder
