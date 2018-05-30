@@ -15,4 +15,4 @@ This repository contains a program built upon a Raspberry-Pi SPIBOX script with 
 
 -Terminate GUI when processing is complete and restart process
 
-Incorporates file monitoring via pyinotify, multi-threading, queues, Tkinter, and Primitive image processing (GO language).
+-Incorporates file monitoring via pyinotify, multi-threading, queues, Tkinter, and Primitive image processing (GO language).
